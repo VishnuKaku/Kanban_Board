@@ -15,6 +15,8 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [titleError, setTitleError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Drag state
@@ -83,13 +85,27 @@ function App() {
     setShowModal(false);
     setTitle('');
     setDescription('');
+    setTitleError('');
+    setDescriptionError('');
   };
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim()) {
-      dispatch(addTask({ title, description }));
-      closeModal();
+    let valid = true;
+    if (!title.trim()) {
+      setTitleError('Title is required.');
+      valid = false;
+    } else {
+      setTitleError('');
     }
+    if (!description.trim()) {
+      setDescriptionError('Description is required.');
+      valid = false;
+    } else {
+      setDescriptionError('');
+    }
+    if (!valid) return;
+    dispatch(addTask({ title, description }));
+    closeModal();
   };
 
   // Drag handlers
@@ -247,15 +263,18 @@ function App() {
                 aria-label="Task title"
                 onKeyDown={e => { if (e.key === 'Escape') closeModal(); }}
               />
+              {titleError && <div style={{ color: 'red', fontSize: 13, marginTop: 2 }}>{titleError}</div>}
             </label>
             <label>
               Description
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
+                required
                 aria-label="Task description"
                 onKeyDown={e => { if (e.key === 'Escape') closeModal(); }}
               />
+              {descriptionError && <div style={{ color: 'red', fontSize: 13, marginTop: 2 }}>{descriptionError}</div>}
             </label>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button type="button" onClick={closeModal} aria-label="Cancel add task">Cancel</button>
