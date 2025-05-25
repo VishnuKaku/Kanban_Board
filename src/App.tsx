@@ -113,45 +113,80 @@ function App() {
     <div className={`App ${theme}`}>
       <h1 style={{ textAlign: 'center', marginBottom: 32, fontWeight: 700, fontSize: '2.2rem', letterSpacing: '0.01em' }}>Mini Kanban Board</h1>
       <div className="kanban-board">
-        {columns.map(col => (
-          <div
-            key={col.key}
-            className="kanban-column"
-            onDragOver={e => e.preventDefault()}
-            onDrop={() => handleDrop(col.key)}
-            aria-label={col.label + ' column'}
-            tabIndex={0}
-          >
-            <h2>{col.label}</h2>
-            {tasks.filter(t => t.status === col.key).map(task => (
-              <div
-                key={task.id}
-                className="kanban-task-card"
-                draggable
-                onDragStart={() => handleDragStart(task.id)}
-                onDragEnd={handleDragEnd}
-                tabIndex={0}
-                aria-grabbed={draggedTaskId === task.id}
-              >
-                <strong>{task.title}</strong>
-                <p>{task.description}</p>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {columns.filter(c => c.key !== col.key).map(c => (
-                    <button key={c.key} onClick={() => dispatch(moveTask({ id: task.id, status: c.key }))}>
-                      Move to {c.label}
-                    </button>
-                  ))}
+        {columns.map(col => {
+          const colTasks = tasks.filter(t => t.status === col.key);
+          return (
+            <div
+              key={col.key}
+              className="kanban-column"
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => handleDrop(col.key)}
+              aria-label={col.label + ' column'}
+              tabIndex={0}
+              role="region"
+              aria-labelledby={`column-title-${col.key}`}
+            >
+              <h2 id={`column-title-${col.key}`}>{col.label}</h2>
+              {colTasks.length === 0 ? (
+                <div style={{
+                  minHeight: 80,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#bbb',
+                  fontStyle: 'italic',
+                  opacity: 0.8
+                }} aria-label={`No tasks in ${col.label}`}
+                >
+                  <span style={{fontSize: 32, marginBottom: 4}} aria-hidden="true">🗒️</span>
+                  <span>No tasks here</span>
                 </div>
-              </div>
-            ))}
-          </div>
-        ))}
+              ) : (
+                colTasks.map(task => (
+                  <div
+                    key={task.id}
+                    className="kanban-task-card"
+                    draggable
+                    onDragStart={() => handleDragStart(task.id)}
+                    onDragEnd={handleDragEnd}
+                    tabIndex={0}
+                    aria-grabbed={draggedTaskId === task.id}
+                    aria-label={`Task: ${task.title}. ${task.description ? 'Description: ' + task.description : ''}`}
+                    role="article"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        // Focus first move button
+                        const btn = e.currentTarget.querySelector('button');
+                        if (btn) (btn as HTMLButtonElement).focus();
+                      }
+                    }}
+                  >
+                    <strong>{task.title}</strong>
+                    <p>{task.description}</p>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {columns.filter(c => c.key !== col.key).map(c => (
+                        <button
+                          key={c.key}
+                          onClick={() => dispatch(moveTask({ id: task.id, status: c.key }))}
+                          aria-label={`Move ${task.title} to ${c.label}`}
+                        >
+                          Move to {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          );
+        })}
       </div>
       <div className="kanban-controls">
-        <button onClick={openModal}>Add Task</button>
-        <button onClick={handleUndo} disabled={history.length <= 1}>Undo</button>
-        <button onClick={handleRedo} disabled={future.length === 0}>Redo</button>
-        <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+        <button onClick={openModal} aria-label="Add Task">Add Task</button>
+        <button onClick={handleUndo} disabled={history.length <= 1} aria-label="Undo">Undo</button>
+        <button onClick={handleRedo} disabled={future.length === 0} aria-label="Redo">Redo</button>
+        <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
           {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </button>
       </div>
@@ -174,6 +209,10 @@ function App() {
             zIndex: 1000
           }}
           onClick={closeModal}
+          tabIndex={-1}
+          onKeyDown={e => {
+            if (e.key === 'Escape') closeModal();
+          }}
         >
           <form
             onClick={e => e.stopPropagation()}
@@ -194,6 +233,8 @@ function App() {
               top: 0,
               left: 0
             }}
+            role="form"
+            aria-label="Add new task"
           >
             <h2 style={{marginTop:0}}>Add New Task</h2>
             <label>
@@ -204,6 +245,7 @@ function App() {
                 onChange={e => setTitle(e.target.value)}
                 required
                 aria-label="Task title"
+                onKeyDown={e => { if (e.key === 'Escape') closeModal(); }}
               />
             </label>
             <label>
@@ -212,11 +254,12 @@ function App() {
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 aria-label="Task description"
+                onKeyDown={e => { if (e.key === 'Escape') closeModal(); }}
               />
             </label>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={closeModal}>Cancel</button>
-              <button type="submit">Add</button>
+              <button type="button" onClick={closeModal} aria-label="Cancel add task">Cancel</button>
+              <button type="submit" aria-label="Add task">Add</button>
             </div>
           </form>
         </div>
